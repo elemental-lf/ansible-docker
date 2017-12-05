@@ -1,0 +1,54 @@
+---
+#
+# SELinux setup
+#
+
+# From https://github.com/dpw/selinux-dockersock/blob/master/README.md:
+#
+# A nice trick with docker is to mount the docker daemon's unix socket into
+# a container, so that container can act as a client to the docker daemon it
+# is running under, e.g.:
+#
+# docker run ... -v /var/run/docker.sock:/var/run/docker.sock
+#
+# But this doesn't work with Fedora or RHEL as the host because of their use
+# of SELinux to harden containers.  When the docker client attempts to
+# access /var/run/docker.sock within the container, you'll get "Permission
+# denied" errors.
+#
+# This repo contains a small SELinux module that fixes this issue, allowing
+# containers to access the socket.
+#
+# LF: This also opens up a big security hole which SELinux would have
+# prevented...
+#
+
+- name: make sure git is installed
+  yum:
+    name: git
+    state: present
+- name: clone selinux-dockersock repository
+  git:
+    repo: https://github.com/dpw/selinux-dockersock.git
+    dest: "{{ docker_selinux_dockersock_src_directory }}"
+    version: "{{ docker_selinux_dockersock_version }}"
+
+- name: check if SELinux docker socket security module is already loaded
+  shell: /sbin/semodule -lstandard | /bin/grep -q dockersock
+  register: docker_selinux_dockersock_exists
+  ignore_errors: True
+
+- name: install SELinux docker socket security module
+  command: make
+  args:
+    chdir: "{{ docker_selinux_dockersock_src_directory }}"
+  when: docker_selinux_enabled and docker_selinux_dockersock_exists|failed
+
+- name: uninstall SELinux docker socket security module (SELinux in Docker is disabled)
+  command: make unload
+  args:
+    chdir: "{{ docker_selinux_dockersock_src_directory }}"
+  when: not docker_selinux_enabled and docker_selinux_dockersock_exists|succeeded
+
+- name: enable and start docker engine
+  service: name=docker enabled=yes state=started

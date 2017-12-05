@@ -1,0 +1,25 @@
+[Service]
+ExecStart=
+ExecStart=/usr/bin/dockerd -H unix:///var/run/docker.sock -H tcp://0.0.0.0:2376 \
+{% if docker_selinux_enabled %}
+	--selinux-enabled=true \
+{% else %}
+	--selinux-enabled=false \
+{% endif %}
+{% if docker_icc %}
+	--icc=true \
+{% else %}
+	--icc=false \
+{% endif %}
+{% if docker_bip is defined %}
+	--bip={{ docker_bip }} \
+{% endif %}
+{% if docker_ipv6 %}
+	--ipv6=true \
+{% else %}
+	--ipv6=false \
+{% endif %}
+{% if docker_ipv6 and (docker_fixed_ipv6_cidr is defined) %}
+	--fixed-cidr-v6={{ docker_fixed_ipv6_cidr }} \
+{% endif %}
+	--tlsverify --tlscacert=/etc/docker/ssl/ca.pem --tlscert=/etc/docker/ssl/cert.pem --tlskey=/etc/docker/ssl/key.pem

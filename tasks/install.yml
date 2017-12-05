@@ -1,0 +1,41 @@
+---
+- name: add docker repo for most recent docker builds
+  yum_repository:
+    name: docker
+    description: Docker Repository
+    baseurl: https://download.docker.com/linux/centos/$releasever/$basearch/stable
+    gpgcheck: yes
+    gpgkey: https://download.docker.com/linux/centos/gpg
+    enabled: yes
+
+# This also automatically obsoletes and removes an old docker-python RPM if installed
+- name: ensure python-docker-py is installed
+  yum: name=python-docker-py state=latest
+
+- name: install versionlock plugin for yum
+  yum: name=yum-plugin-versionlock.noarch state=present
+
+- name: versionlock docker-ce-{{ docker_version }}
+  command: /bin/yum versionlock delete docker-ce
+  args:
+    warn: no
+  ignore_errors: yes
+
+- name: install docker engine and supplemental packages
+  yum: name={{ item }} state=present
+  register: yum_docker
+  with_items:
+    - docker-ce-{{ docker_version }}
+
+- name: versionlock docker-ce-{{ docker_version }}
+  command: /bin/yum versionlock docker-ce
+  args:
+    warn: no
+
+- name: fetch docker compose
+  get_url: 
+  args:
+    url: https://github.com/docker/compose/releases/download/{{docker_compose_version}}/docker-compose-{{ansible_system}}-{{ansible_machine}}
+    dest: /usr/local/bin/docker-compose
+    mode: 0755
+    force: yes

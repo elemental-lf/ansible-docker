@@ -1,0 +1,67 @@
+---
+#
+# Docker swarm setup
+#
+
+# TCP port 2377 for cluster management communications
+# TCP and UDP port 7946 for communication among nodes
+# UDP port 4789 for overlay network traffic
+- name: enable access to Docker swarm ports (runtime)
+  command: /bin/firewall-cmd --zone=public --add-port={{ item }}
+  with_items:
+  - 2377/tcp
+  - 7946/tcp
+  - 7946/udp
+  - 4789/udp
+  when: docker_firewalld_public_allow
+
+- name: enable access to Docker swarm ports (permanent)
+  command: /bin/firewall-cmd --zone=public --add-port={{ item }} --permanent
+  with_items:
+  - 2377/tcp
+  - 7946/tcp
+  - 7946/udp
+  - 4789/udp
+  when: docker_firewalld_public_allow
+
+- name: check if we're already part of a Docker swarm
+  command: docker info -f {%raw%}'{{ .Swarm.LocalNodeState }}'{%endraw%}
+  register: docker_info
+
+- name: initialize Docker swarm
+  command: docker swarm init --advertise-addr '{{ ipv4_address }}:2377'
+  register: docker_swarm_init
+  when: (docker_info.stdout_lines[0] != 'active') and not docker_swarm_manager_token is defined and not docker_swarm_worker_token is defined
+
+- name: get Docker swarm manager token
+  command: docker swarm join-token -q manager
+  register: docker_swarm_new_manager_token
+  when: not docker_swarm_manager_token is defined and not docker_swarm_worker_token is defined
+
+- name: get Docker swarm worker token
+  command: docker swarm join-token -q worker
+  register: docker_swarm_new_worker_token
+  when: not docker_swarm_manager_token is defined and not docker_swarm_worker_token is defined
+
+- name: create local directory for Docker swarm tokens
+  local_action: command mkdir -p './files/{{ ansible_hostname }}/docker-swarm'
+  become: no
+  when: not docker_swarm_manager_token is defined and not docker_swarm_worker_token is defined
+
+- name: save Docker swarm manager token
+  local_action: shell echo '{{ docker_swarm_new_manager_token.stdout }}' >'./files/{{ ansible_hostname }}/docker-swarm/manager-token.txt'
+  become: no
+  when: not docker_swarm_manager_token is defined and not docker_swarm_worker_token is defined
+
+- name: save Docker swarm worker token
+  local_action: shell echo '{{ docker_swarm_new_worker_token.stdout }}' >'./files/{{ ansible_hostname }}/docker-swarm/worker-token.txt'
+  become: no
+  when: not docker_swarm_manager_token is defined and not docker_swarm_worker_token is defined
+
+- name: join Docker swarm as manager
+  command: docker swarm join --advertise-addr '{{ ipv4_address }}:2377' --token '{{ docker_swarm_manager_token }}' '{{ docker_swarm_manager_ipv4_address }}:2377'
+  when: (docker_info.stdout_lines[0] != 'active') and docker_swarm_manager_token is defined
+
+- name: join Docker swarm as worker
+  command: docker swarm join --advertise-addr '{{ ipv4_address }}:2377' --token '{{ docker_swarm_worker_token }}' '{{ docker_swarm_manager_ipv4_address }}:2377'
+  when: (docker_info.stdout_lines[0] != 'active') and docker_swarm_worker_token is defined

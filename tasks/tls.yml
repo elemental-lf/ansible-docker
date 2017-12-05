@@ -1,0 +1,111 @@
+---
+#
+# TLS setup
+#
+
+# TLS configuration: http://tech.paulcz.net/2016/01/secure-docker-with-tls/
+# TLS configuration: https://hub.docker.com/r/paulczar/omgwtfssl/
+
+- name: create directory for Docker engine TLS configuration
+  file: name=/etc/docker/ssl owner=root mode=0755 state=directory recurse=yes
+
+- name: install TLS key, cert und ca
+  copy:
+    src: "{{ item }}"
+    dest: "/etc/docker/ssl/{{ item|basename }}"
+    mode: 0600
+  with_items:
+  - "{{ docker_tls_key }}"
+  - "{{ docker_tls_cert }}"
+  - "{{ docker_tls_ca }}"
+  register: docker_install_creds
+  when: not docker_tls_generate_if_not_exists
+
+- name: check for existing TLS configuration
+  stat: path=/etc/docker/ssl/ca.pem
+  register: docker_ca_pem_file
+
+- name: pull paulczar/omgwtfssl image
+  docker_image:
+    name: paulczar/omgwtfssl
+    tag: latest
+  when: not docker_ca_pem_file.stat.exists
+
+- name: create directory for Docker client TLS configuration
+  file: name=/root/.docker owner=root mode=0755 state=directory recurse=yes
+  when: not docker_ca_pem_file.stat.exists
+
+- name: generate CA und client keys and certificates
+  command: >
+    docker run --rm -v /root/.docker:/certs
+      -e CA_EXPIRE=18250 -e SSL_EXPIRE=1825
+      -e SSL_SUBJECT=root@{{ ansible_nodename }}
+      -e CA_SUBJECT='Docker {{ ansible_nodename }} CA'
+      -e SSL_SIZE=4096
+       paulczar/omgwtfssl
+  when: not docker_ca_pem_file.stat.exists
+
+# paulczar/omgwtfssl automatically adds SSL_SUBJECT to SSL_DNS
+- name: generate server key and certificate
+  command: >
+    docker run --rm -v /etc/docker/ssl:/server
+      -v /root/.docker:/certs
+      -e SSL_SUBJECT={{ ansible_nodename }}
+      -e SSL_IP=127.0.0.1,::1,{{ipv4_address}}{{ ((ipv6_address is defined) and ipv6_address)|ternary(',' + ipv6_address, '')}}
+      -e SSL_DNS=localhost,localhost.localdomain,{{ ansible_hostname }},{{ ansible_nodename }}
+      -e SSL_KEY=/server/key.pem
+      -e SSL_CERT=/server/cert.pem
+      -e SSL_CSR=/server/key.csr
+      -e SSL_SIZE=4096
+      paulczar/omgwtfssl
+  when: not docker_ca_pem_file.stat.exists
+
+- name: copy CA certificate to /etc/docker/ssl
+  copy: remote_src=True src=/root/.docker/ca.pem dest=/etc/docker/ssl/ca.pem
+  when: not docker_ca_pem_file.stat.exists
+
+- name: protect TLS files
+  file:
+    dest: "{{ item }}"
+    mode: 0600
+  with_items:
+  - /etc/docker/ssl/key.pem
+  - /etc/docker/ssl/cert.pem
+  - /etc/docker/ssl/ca.pem
+
+# See: https://docs.docker.com/engine/admin/systemd/
+- name: create directory for customer docker service configuration
+  file: name=/etc/systemd/system/docker.service.d owner=root mode=0755 state=directory
+
+- name: delete old custom service configuration
+  file: path=/etc/systemd/system/docker.service.d/10-ssl.conf state=absent
+  ignore_errors: True
+
+- name: create custom service configuration
+  template: src=templates/10-custom.conf.j2 dest=/etc/systemd/system/docker.service.d/10-custom.conf
+  register: docker_systemd_service_config
+
+- name: reload systemd configuration
+  command: /usr/bin/systemctl daemon-reload
+  when: docker_systemd_service_config.changed
+
+- name: restart docker engine
+  service: name=docker state=restarted
+  when: yum_docker.changed or docker_systemd_service_config.changed or not docker_ca_pem_file.stat.exists or ((docker_install_creds is defined) and docker_install_creds.changed)
+
+- name: enable access to Docker port 2376 (runtime)
+  command: /bin/firewall-cmd --zone=public --add-port=2376/tcp
+  when: docker_firewalld_public_allow
+
+- name: enable access to Docker port 2376 (permanent)
+  command: /bin/firewall-cmd --zone=public --add-port=2376/tcp --permanent
+  when: docker_firewalld_public_allow
+
+- name: transfer TLS credentials to management host (key.pem)
+  fetch: src=/root/.docker/key.pem dest={{ docker_tls_key }} flat=yes
+
+- name: transfer TLS credentials to management host (cert.pem)
+  fetch: src=/root/.docker/cert.pem dest={{ docker_tls_cert }} flat=yes
+
+- name: transfer TLS credentials to management host (ca.pem)
+  fetch: src=/root/.docker/ca.pem dest={{ docker_tls_ca }} flat=yes

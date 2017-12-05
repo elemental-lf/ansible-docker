@@ -1,0 +1,25 @@
+---
+docker_version: 17.09.0.ce-1.el7.centos
+docker_compose_version: 1.17.1
+
+ipv4_address: "{{ ansible_default_ipv4.address }}"
+ipv6_address: "{{ (ansible_default_ipv6.address is defined)|ternary(ansible_default_ipv6.address, None) }}"
+
+docker_selinux_dockersock_src_directory: /usr/local/src/selinux-dockersock
+docker_selinux_dockersock_version: 240caff55333754dd782ce694ef4f54d840bc15c
+
+docker_selinux_enabled: False
+docker_icc: False
+docker_ipv6: False
+docker_firewalld_public_allow: False
+
+docker_tls_generate_if_not_exists: True
+docker_tls_key: "./files/{{ ansible_hostname }}/docker-tls/key.pem"
+docker_tls_cert: "./files/{{ ansible_hostname }}/docker-tls/cert.pem"
+docker_tls_ca: "./files/{{ ansible_hostname }}/docker-tls/ca.pem"
+
+docker_swarm: False
+docker_swarm_manager: False
+# docker_swarm_manager_ipv4_address
+# docker_swarm_manager_token
+# docker_swarm_worker_token
