@@ -3,6 +3,9 @@
 Ansible role to install Docker stand-alone or in swam mode on a RHEL/CentOS 7
 host.
 
+Swarm support is work in progress but it can successfully build a running
+cluster.
+
 The file containing the TLS key for accessing the Docker API is currently
 not encrypted.  It could be encrypted with ansible-vault because the copy
 module would decrypt it on the fy.  Unfortunately it's also currently
