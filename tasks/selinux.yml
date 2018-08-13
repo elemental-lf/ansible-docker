@@ -42,13 +42,13 @@
   command: make
   args:
     chdir: "{{ docker_selinux_dockersock_src_directory }}"
-  when: docker_selinux_enabled and docker_selinux_dockersock_exists|failed
+  when: docker_selinux_enabled and docker_selinux_dockersock_exists is failed
 
 - name: uninstall SELinux docker socket security module (SELinux in Docker is disabled)
   command: make unload
   args:
     chdir: "{{ docker_selinux_dockersock_src_directory }}"
-  when: not docker_selinux_enabled and docker_selinux_dockersock_exists|succeeded
+  when: not docker_selinux_enabled and docker_selinux_dockersock_exists is succeeded
 
 - name: enable and start docker engine
   service: name=docker enabled=yes state=started
