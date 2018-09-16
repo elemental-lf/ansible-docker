@@ -101,8 +101,30 @@
   command: /bin/firewall-cmd --zone=public --add-port=2376/tcp --permanent
   when: docker_firewalld_public_allow
 
+- name: transfer TLS credentials to management host
+  block:
+    - name: transfer TLS credentials to management host (key.pem.tmp)
+      fetch: src=/root/.docker/key.pem dest={{ docker_tls_key }}.tmp flat=yes
+
+    - name: encrypt TLS key on management host (key.pem.tmp -> key.pem)
+      command: openssl rsa -camellia256 -passout stdin -in '{{ docker_tls_key }}.tmp' -out '{{ docker_tls_key }}'
+      args:
+       stdin: '{{ docker_tls_key_password }}'
+       chdir: '{{ playbook_dir }}'
+      delegate_to: localhost
+      become: False
+
+    - name: delete temporary TLS key
+      file: 
+        path: '{{docker_tls_key}}.tmp'
+        state: absent
+      delegate_to: localhost
+      become: False
+  when: docker_tls_key_password is defined and docker_tls_key_password != ''
+
 - name: transfer TLS credentials to management host (key.pem)
-  fetch: src=/root/.docker/key.pem dest={{ docker_tls_key }} flat=yes
+  fetch: src=/root/.docker/key.pem dest={{ docker_tls_key }}.tmp flat=yes
+  when: docker_tls_key_password is not defined or docker_tls_key_password == ''
 
 - name: transfer TLS credentials to management host (cert.pem)
   fetch: src=/root/.docker/cert.pem dest={{ docker_tls_cert }} flat=yes
