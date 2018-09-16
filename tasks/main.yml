@@ -1,11 +1,11 @@
 ---
 # Docker changes: https://github.com/docker/docker/blob/master/CHANGELOG.md
 
-- include: install.yml
+- import_tasks: install.yml
 
-- include: selinux.yml
+- import_tasks: selinux.yml
 
-- include: tls.yml
+- import_tasks: tls.yml
 
-- include: swarm.yml
+- import_tasks: swarm.yml
   when: docker_swarm

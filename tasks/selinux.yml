@@ -23,26 +23,10 @@
 # prevented...
 #
 
-- name: make sure git is installed
-  yum:
-    name: git
-    state: present
-- name: clone selinux-dockersock repository
-  git:
-    repo: https://github.com/dpw/selinux-dockersock.git
-    dest: "{{ docker_selinux_dockersock_src_directory }}"
-    version: "{{ docker_selinux_dockersock_version }}"
-
 - name: check if SELinux docker socket security module is already loaded
   shell: /sbin/semodule -lstandard | /bin/grep -q dockersock
   register: docker_selinux_dockersock_exists
   ignore_errors: True
-
-- name: install SELinux docker socket security module
-  command: make
-  args:
-    chdir: "{{ docker_selinux_dockersock_src_directory }}"
-  when: docker_selinux_enabled and docker_selinux_dockersock_exists is failed
 
 - name: uninstall SELinux docker socket security module (SELinux in Docker is disabled)
   command: make unload
@@ -50,5 +34,24 @@
     chdir: "{{ docker_selinux_dockersock_src_directory }}"
   when: not docker_selinux_enabled and docker_selinux_dockersock_exists is succeeded
 
-- name: enable and start docker engine
-  service: name=docker enabled=yes state=started
+- name: install SELinux docker socket security module
+  block:
+    - name: make sure git is installed
+      yum:
+        name: git
+        state: present
+  
+    - name: clone selinux-dockersock repository
+      git:
+        repo: https://github.com/dpw/selinux-dockersock.git
+        dest: "{{ docker_selinux_dockersock_src_directory }}"
+        version: "{{ docker_selinux_dockersock_version }}"
+
+    - name: install SELinux docker socket security module
+      command: make
+      args:
+        chdir: "{{ docker_selinux_dockersock_src_directory }}"
+
+    - name: restart docker engine
+      service: name=docker state=restarted
+  when: docker_selinux_enabled and docker_selinux_dockersock_exists is failed
