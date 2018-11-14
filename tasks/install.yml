@@ -21,11 +21,11 @@
     warn: no
   ignore_errors: yes
 
-- name: install docker engine and supplemental packages
-  yum: name={{ item }} state=present
+- name: install docker engine
+  yum: 
+    name: "docker-ce-{{ docker_version }}"
+    state: present
   register: yum_docker
-  with_items:
-    - docker-ce-{{ docker_version }}
 
 - name: versionlock docker-ce-{{ docker_version }}
   command: /bin/yum versionlock docker-ce
