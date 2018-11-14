@@ -120,14 +120,16 @@
         state: absent
       delegate_to: localhost
       become: False
-  when: docker_tls_key_password is defined and docker_tls_key_password != ''
+  when: not docker_ca_pem_file.stat.exists and docker_tls_key_password is defined and docker_tls_key_password != ''
 
 - name: transfer TLS credentials to management host (key.pem)
   fetch: src=/root/.docker/key.pem dest={{ docker_tls_key }}.tmp flat=yes
-  when: docker_tls_key_password is not defined or docker_tls_key_password == ''
+  when: not docker_ca_pem_file.stat.exists and docker_tls_key_password is not defined or docker_tls_key_password == ''
 
 - name: transfer TLS credentials to management host (cert.pem)
   fetch: src=/root/.docker/cert.pem dest={{ docker_tls_cert }} flat=yes
+  when: not docker_ca_pem_file.stat.exists
 
 - name: transfer TLS credentials to management host (ca.pem)
   fetch: src=/root/.docker/ca.pem dest={{ docker_tls_ca }} flat=yes
+  when: not docker_ca_pem_file.stat.exists
