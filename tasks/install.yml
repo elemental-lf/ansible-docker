@@ -36,8 +36,8 @@
 - name: ensure that SELinux labels are set correctly
   command:
     /usr/sbin/restorecon -RvF /usr/bin/containerd /usr/bin/containerd-shim /usr/bin/docker
-    /usr/bin/dockerd /usr/bin/dockerd-ce /usr/bin/docker-init /usr/bin/docker-proxy
-    /usr/lib/systemd/system/containerd.service /usr/sbin/runc
+    /usr/bin/dockerd /usr/bin/docker-init /usr/bin/docker-proxy
+    /usr/lib/systemd/system/containerd.service /usr/bin/runc /usr/bin/containerd
 
 - name: fetch docker compose
   get_url: 
