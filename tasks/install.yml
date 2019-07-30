@@ -16,7 +16,7 @@
   yum: name=yum-plugin-versionlock.noarch state=present
 
 - name: versionlock docker-ce-{{ docker_version }}
-  command: /bin/yum versionlock delete docker-ce docker-ce-cli
+  command: /bin/yum versionlock delete docker-ce docker-ce-cli containerd.io
   args:
     warn: no
   ignore_errors: yes
@@ -28,7 +28,7 @@
   register: yum_docker
 
 - name: versionlock docker-ce-{{ docker_version }}
-  command: /bin/yum versionlock docker-ce docker-ce-cli
+  command: /bin/yum versionlock docker-ce docker-ce-cli containerd.io
   args:
     warn: no
 
