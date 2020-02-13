@@ -1,6 +1,6 @@
 ---
-docker_version: 19.03.1-*.el7
-docker_compose_version: 1.24.0
+docker_version: 19.03.6-*.el7
+docker_compose_version: 1.25.4
 
 ipv4_address: "{{ ansible_default_ipv4.address }}"
 ipv6_address: "{{ (ansible_default_ipv6.address is defined)|ternary(ansible_default_ipv6.address, None) }}"
