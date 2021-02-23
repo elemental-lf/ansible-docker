@@ -34,10 +34,7 @@
 
 # See https://github.com/containers/container-selinux/pull/64#issuecomment-461518027
 - name: ensure that SELinux labels are set correctly
-  command:
-    /usr/sbin/restorecon -RvF /usr/bin/containerd /usr/bin/containerd-shim /usr/bin/docker
-    /usr/bin/dockerd /usr/bin/docker-init /usr/bin/docker-proxy
-    /usr/lib/systemd/system/containerd.service /usr/bin/runc /usr/bin/containerd
+  shell: /usr/sbin/restorecon -RvF $(rpm -ql containerd.io docker-ce)
 
 - name: fetch docker compose
   get_url: 
