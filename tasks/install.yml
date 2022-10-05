@@ -21,16 +21,18 @@
     warn: no
   ignore_errors: yes
 
-- name: install docker engine
+- name: install docker
   yum: 
     name:
       - "docker-ce-{{ docker_version }}"
       - "docker-ce-cli-{{ docker_version }}"
+      - "docker-compose-plugin-{{ docker_compose_version }}"
     state: present
   register: yum_docker
 
+
 - name: versionlock docker-ce-{{ docker_version }}
-  command: /bin/yum versionlock docker-ce docker-ce-cli containerd.io docker-ce-rootless-extras
+  command: /bin/yum versionlock docker-ce docker-ce-cli containerd.io docker-ce-rootless-extras docker-compose-plugin
   args:
     warn: no
 
@@ -38,10 +40,7 @@
 - name: ensure that SELinux labels are set correctly
   shell: /usr/sbin/restorecon -RvF $(rpm -ql containerd.io docker-ce)
 
-- name: fetch docker compose
-  get_url: 
-  args:
-    url: https://github.com/docker/compose/releases/download/{{docker_compose_version}}/docker-compose-{{ansible_system}}-{{ansible_machine}}
-    dest: /usr/local/bin/docker-compose
-    mode: 0755
-    force: yes
+- name: delete old docker-compose standalone binary
+  file:
+    path: /usr/local/bin/docker-compose
+    state: absent
