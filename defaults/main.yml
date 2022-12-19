@@ -25,3 +25,11 @@ docker_swarm_manager: False
 # docker_swarm_manager_ipv4_address
 # docker_swarm_manager_token
 # docker_swarm_worker_token
+
+docker_install_versionlock:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-ce-rootless-extras
+  - docker-scan-plugin
+  - docker-compose-plugin

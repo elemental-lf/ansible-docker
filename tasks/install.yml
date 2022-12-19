@@ -1,28 +1,54 @@
 ---
-- name: add docker repo for most recent docker builds
-  yum_repository:
-    name: docker
-    description: Docker Repository
-    baseurl: https://download.docker.com/linux/centos/$releasever/$basearch/stable
-    gpgcheck: yes
-    gpgkey: https://download.docker.com/linux/centos/gpg
-    enabled: yes
 
-# This also automatically obsoletes and removes an old docker-python RPM if installed
-- name: ensure python-docker-py is installed
-  yum: name=python-docker-py state=latest
+- block:
+    - name: add docker repo for most recent docker builds
+      yum_repository:
+        name: docker
+        description: Docker Repository
+        baseurl: https://download.docker.com/linux/centos/$releasever/$basearch/stable
+        gpgcheck: yes
+        gpgkey: https://download.docker.com/linux/centos/gpg
+        enabled: yes
 
-- name: install versionlock plugin for yum
-  yum: name=yum-plugin-versionlock.noarch state=present
+    - name: ensure python-docker-py and yum-plugin-versionlock packages are installed
+      package: name={{ item }} state=latest
+      loop:
+        # This also automatically obsoletes and removes an old docker-python RPM if installed
+        - python-docker-py
+        - yum-plugin-versionlock
 
-- name: versionlock docker-ce-{{ docker_version }}
-  command: /bin/yum versionlock delete docker-ce docker-ce-cli containerd.io docker-ce-rootless-extras
+    - set_fact:
+        package_manager_path: /bin/yum
+  when: ansible_os_family == 'RedHat' and ansible_distribution != "Fedora"
+
+- block:
+    - name: add docker repo for most recent docker builds
+      yum_repository:
+        name: docker
+        description: Docker Repository
+        baseurl: https://download.docker.com/linux/fedora/$releasever/$basearch/stable
+        gpgcheck: yes
+        gpgkey: https://download.docker.com/linux/fedora/gpg
+        enabled: yes
+
+    - name: ensure python3-docker and python3-dnf-plugin-versionlock packages are installed
+      package: name={{ item }} state=latest
+      loop:
+        - python3-docker
+        - python3-dnf-plugin-versionlock
+
+    - set_fact:
+        package_manager_path: /usr/bin/dnf
+  when: ansible_os_family == 'RedHat' and ansible_distribution == "Fedora"
+
+- name: versionlock docker-ce
+  command: "{{ package_manager_path }} versionlock {{ docker_install_versionlock | join(' ') }}"
   args:
     warn: no
   ignore_errors: yes
 
 - name: install docker
-  yum: 
+  package:
     name:
       - "docker-ce-{{ docker_version }}"
       - "docker-ce-cli-{{ docker_version }}"
@@ -30,9 +56,8 @@
     state: present
   register: yum_docker
 
-
-- name: versionlock docker-ce-{{ docker_version }}
-  command: /bin/yum versionlock docker-ce docker-ce-cli containerd.io docker-ce-rootless-extras docker-compose-plugin
+- name: versionlock docker-ce
+  command: "{{ package_manager_path }} versionlock {{ docker_install_versionlock | join(' ') }}"
   args:
     warn: no
 
