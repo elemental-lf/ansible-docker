@@ -6,6 +6,7 @@
 - import_tasks: selinux.yml
 
 - import_tasks: tls.yml
+  when: docker_tls
 
 - import_tasks: swarm.yml
   when: docker_swarm

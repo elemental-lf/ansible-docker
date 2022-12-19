@@ -13,6 +13,7 @@ docker_icc: False
 docker_ipv6: False
 docker_firewalld_public_allow: False
 
+docker_tls: True
 docker_tls_generate_if_not_exists: True
 docker_tls_key: "./files/{{ ansible_hostname }}/docker-tls/key.pem"
 docker_tls_cert: "./files/{{ ansible_hostname }}/docker-tls/cert.pem"
