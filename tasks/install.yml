@@ -41,10 +41,8 @@
         package_manager_path: /usr/bin/dnf
   when: ansible_os_family == 'RedHat' and ansible_distribution == "Fedora"
 
-- name: versionlock docker-ce
-  command: "{{ package_manager_path }} versionlock {{ docker_install_versionlock | join(' ') }}"
-  args:
-    warn: no
+- name: versionlock delete docker-ce
+  command: "{{ package_manager_path }} versionlock delete {{ docker_install_versionlock | join(' ') }}"
   ignore_errors: yes
 
 - name: install docker
@@ -58,8 +56,6 @@
 
 - name: versionlock docker-ce
   command: "{{ package_manager_path }} versionlock {{ docker_install_versionlock | join(' ') }}"
-  args:
-    warn: no
 
 # See https://github.com/containers/container-selinux/pull/64#issuecomment-461518027
 - name: ensure that SELinux labels are set correctly
