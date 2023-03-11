@@ -1,5 +1,5 @@
 ---
-docker_version: "20.10.21-*"
+docker_version: "23.0.1-*"
 docker_compose_version: "2.12.2-*"
 
 ipv4_address: "{{ ansible_default_ipv4.address }}"
@@ -33,3 +33,4 @@ docker_install_versionlock:
   - docker-ce-rootless-extras
   - docker-scan-plugin
   - docker-compose-plugin
+  - docker-buildx-plugin
